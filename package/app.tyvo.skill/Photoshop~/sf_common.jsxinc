@@ -1,0 +1,473 @@
+// TYVO - shared Photoshop helpers (ExtendScript / ES3).
+// Included by stylize_atlas.jsx, split_to_layers.jsx, finalize_psd.jsx, build_asl.jsx.
+
+var SF = SF || {};
+
+SF.c = function (s) { return charIDToTypeID(s); };
+SF.s = function (s) { return stringIDToTypeID(s); };
+SF.NO = DialogModes.NO;
+
+// ---------------------------------------------------------------- files / json
+SF.readText = function (path) {
+    var f = new File(path);
+    f.encoding = "UTF-8";
+    if (!f.open("r")) throw new Error("Cannot read " + path);
+    var t = f.read();
+    f.close();
+    return t;
+};
+
+SF.writeText = function (path, text) {
+    var f = new File(path);
+    f.encoding = "UTF-8";
+    f.lineFeed = "Unix";
+    if (!f.open("w")) throw new Error("Cannot write " + path);
+    f.write(text);
+    f.close();
+};
+
+// Job/style files are produced by our own tools, so eval-based parsing is acceptable here.
+SF.parseJSON = function (text) { return eval("(" + text + ")"); };
+
+SF.toJSON = function (v) {
+    if (v === null || v === undefined) return "null";
+    var t = typeof v;
+    if (t === "number") return isFinite(v) ? String(v) : "null";
+    if (t === "boolean") return v ? "true" : "false";
+    if (t === "string") {
+        return '"' + v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t") + '"';
+    }
+    if (v instanceof Array) {
+        var a = [];
+        for (var i = 0; i < v.length; i++) a.push(SF.toJSON(v[i]));
+        return "[" + a.join(",") + "]";
+    }
+    var parts = [];
+    for (var k in v) if (v.hasOwnProperty(k)) parts.push(SF.toJSON(String(k)) + ":" + SF.toJSON(v[k]));
+    return "{" + parts.join(",") + "}";
+};
+
+// ---------------------------------------------------------------- prefs
+SF.pushPrefs = function () {
+    var saved = { ruler: app.preferences.rulerUnits, type: app.preferences.typeUnits, dialogs: app.displayDialogs };
+    app.preferences.rulerUnits = Units.PIXELS;
+    app.preferences.typeUnits = TypeUnits.PIXELS;
+    app.displayDialogs = DialogModes.NO;
+    return saved;
+};
+
+SF.popPrefs = function (saved) {
+    if (!saved) return;
+    app.preferences.rulerUnits = saved.ruler;
+    app.preferences.typeUnits = saved.type;
+    app.displayDialogs = saved.dialogs;
+};
+
+// ---------------------------------------------------------------- colors / enums
+SF.rgb = function (hex) {
+    hex = String(hex || "#000000").replace("#", "");
+    if (hex.length === 3) hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+    var d = new ActionDescriptor();
+    d.putDouble(SF.c("Rd  "), parseInt(hex.substr(0, 2), 16));
+    d.putDouble(SF.c("Grn "), parseInt(hex.substr(2, 2), 16));
+    d.putDouble(SF.c("Bl  "), parseInt(hex.substr(4, 2), 16));
+    return d;
+};
+
+SF.blend = function (name) {
+    var m = {
+        normal: "Nrml", multiply: "Mltp", screen: "Scrn", overlay: "Ovrl", softlight: "SftL",
+        hardlight: "HrdL", colorburn: "CBrn", colordodge: "CDdg", darken: "Drkn", lighten: "Lghn",
+        difference: "Dfrn", color: "Clr ", luminosity: "Lmns", hue: "H   ", saturation: "Strt"
+    };
+    var key = String(name || "normal").toLowerCase().replace(/[\s_-]/g, "");
+    if (key === "lineardodge" || key === "add") return SF.s("linearDodge");
+    if (key === "linearburn") return SF.s("linearBurn");
+    return SF.c(m[key] || "Nrml");
+};
+
+SF.num = function (v, def) { return (v === undefined || v === null || isNaN(v)) ? def : Number(v); };
+
+SF.linearContour = function () {
+    var c = new ActionDescriptor();
+    c.putString(SF.c("Nm  "), "Linear");
+    var pts = new ActionList();
+    var p0 = new ActionDescriptor(); p0.putDouble(SF.c("Hrzn"), 0); p0.putDouble(SF.c("Vrtc"), 0); pts.putObject(SF.c("CrPt"), p0);
+    var p1 = new ActionDescriptor(); p1.putDouble(SF.c("Hrzn"), 255); p1.putDouble(SF.c("Vrtc"), 255); pts.putObject(SF.c("CrPt"), p1);
+    c.putList(SF.c("Crv "), pts);
+    return c;
+};
+
+// ---------------------------------------------------------------- layer effects
+// Supported effect "type": colorOverlay, gradientOverlay, stroke, dropShadow, innerShadow, outerGlow, innerGlow, bevel
+SF.buildEffects = function (effects) {
+    var fx = new ActionDescriptor();
+    fx.putUnitDouble(SF.c("Scl "), SF.c("#Prc"), 100);
+    var used = {};
+    for (var i = 0; i < effects.length; i++) {
+        var e = effects[i];
+        if (e.enabled === false) continue;
+        var t = String(e.type);
+        if (used[t]) throw new Error("Effect '" + t + "' used twice on one layer. Use an extra style layer instead.");
+        used[t] = true;
+        var d = new ActionDescriptor();
+        d.putBoolean(SF.c("enab"), true);
+        d.putBoolean(SF.s("present"), true);
+        d.putBoolean(SF.s("showInDialog"), true);
+        var opacity = SF.num(e.opacity, 100);
+        switch (t) {
+            case "colorOverlay":
+                d.putEnumerated(SF.c("Md  "), SF.c("BlnM"), SF.blend(e.blend || "normal"));
+                d.putObject(SF.c("Clr "), SF.c("RGBC"), SF.rgb(e.color || "#FFFFFF"));
+                d.putUnitDouble(SF.c("Opct"), SF.c("#Prc"), opacity);
+                fx.putObject(SF.c("SoFi"), SF.c("SoFi"), d);
+                break;
+
+            case "gradientOverlay":
+                d.putEnumerated(SF.c("Md  "), SF.c("BlnM"), SF.blend(e.blend || "normal"));
+                d.putUnitDouble(SF.c("Opct"), SF.c("#Prc"), opacity);
+                var g = new ActionDescriptor();
+                g.putString(SF.c("Nm  "), "Custom");
+                g.putEnumerated(SF.c("GrdF"), SF.c("GrdF"), SF.c("CstS"));
+                g.putDouble(SF.c("Intr"), 4096);
+                var stops = e.stops || [{ color: "#FFFFFF", location: 0 }, { color: "#000000", location: 100 }];
+                var cl = new ActionList(), tl = new ActionList();
+                for (var k = 0; k < stops.length; k++) {
+                    var st = new ActionDescriptor();
+                    st.putObject(SF.c("Clr "), SF.c("RGBC"), SF.rgb(stops[k].color));
+                    st.putEnumerated(SF.c("Type"), SF.c("Clry"), SF.c("UsrS"));
+                    st.putInteger(SF.c("Lctn"), Math.round(SF.num(stops[k].location, 0) * 40.96));
+                    st.putInteger(SF.c("Mdpn"), 50);
+                    cl.putObject(SF.c("Clrt"), st);
+                    var tr = new ActionDescriptor();
+                    tr.putUnitDouble(SF.c("Opct"), SF.c("#Prc"), SF.num(stops[k].opacity, 100));
+                    tr.putInteger(SF.c("Lctn"), Math.round(SF.num(stops[k].location, 0) * 40.96));
+                    tr.putInteger(SF.c("Mdpn"), 50);
+                    tl.putObject(SF.c("TrnS"), tr);
+                }
+                g.putList(SF.c("Clrs"), cl);
+                g.putList(SF.c("Trns"), tl);
+                d.putObject(SF.c("Grad"), SF.c("Grdn"), g);
+                d.putUnitDouble(SF.c("Angl"), SF.c("#Ang"), SF.num(e.angle, 90));
+                d.putEnumerated(SF.c("Type"), SF.c("GrdT"), SF.c("Lnr "));
+                d.putBoolean(SF.c("Rvrs"), e.reverse === true);
+                d.putBoolean(SF.c("Algn"), true);
+                d.putUnitDouble(SF.c("Scl "), SF.c("#Prc"), SF.num(e.scale, 100));
+                var off = new ActionDescriptor();
+                off.putUnitDouble(SF.c("Hrzn"), SF.c("#Prc"), 0);
+                off.putUnitDouble(SF.c("Vrtc"), SF.c("#Prc"), 0);
+                d.putObject(SF.c("Ofst"), SF.c("Pnt "), off);
+                fx.putObject(SF.c("GrFl"), SF.c("GrFl"), d);
+                break;
+
+            case "stroke":
+                var pos = { outside: "OutF", inside: "InsF", center: "CtrF" }[String(e.position || "outside")] || "OutF";
+                d.putEnumerated(SF.c("Styl"), SF.c("FStl"), SF.c(pos));
+                d.putEnumerated(SF.c("PntT"), SF.c("FrFl"), SF.c("SClr"));
+                d.putEnumerated(SF.c("Md  "), SF.c("BlnM"), SF.blend(e.blend || "normal"));
+                d.putUnitDouble(SF.c("Opct"), SF.c("#Prc"), opacity);
+                d.putUnitDouble(SF.c("Sz  "), SF.c("#Pxl"), SF.num(e.size, 3));
+                d.putObject(SF.c("Clr "), SF.c("RGBC"), SF.rgb(e.color || "#000000"));
+                d.putBoolean(SF.s("overprint"), false);
+                fx.putObject(SF.c("FrFX"), SF.c("FrFX"), d);
+                break;
+
+            case "dropShadow":
+            case "innerShadow":
+                d.putEnumerated(SF.c("Md  "), SF.c("BlnM"), SF.blend(e.blend || "multiply"));
+                d.putObject(SF.c("Clr "), SF.c("RGBC"), SF.rgb(e.color || "#000000"));
+                d.putUnitDouble(SF.c("Opct"), SF.c("#Prc"), SF.num(e.opacity, 75));
+                d.putBoolean(SF.c("uglg"), false);
+                d.putUnitDouble(SF.c("lagl"), SF.c("#Ang"), SF.num(e.angle, 90));
+                d.putUnitDouble(SF.c("Dstn"), SF.c("#Pxl"), SF.num(e.distance, 3));
+                d.putUnitDouble(SF.c("Ckmt"), SF.c("#Prc"), SF.num(e.spread, 0));
+                d.putUnitDouble(SF.c("blur"), SF.c("#Pxl"), SF.num(e.size, 0));
+                d.putUnitDouble(SF.c("Nose"), SF.c("#Prc"), 0);
+                d.putBoolean(SF.c("AntA"), false);
+                d.putObject(SF.c("TrnS"), SF.c("ShpC"), SF.linearContour());
+                if (t === "dropShadow") {
+                    d.putBoolean(SF.s("layerConceals"), true);
+                    fx.putObject(SF.c("DrSh"), SF.c("DrSh"), d);
+                } else {
+                    fx.putObject(SF.c("IrSh"), SF.c("IrSh"), d);
+                }
+                break;
+
+            case "outerGlow":
+            case "innerGlow":
+                d.putEnumerated(SF.c("Md  "), SF.c("BlnM"), SF.blend(e.blend || "screen"));
+                d.putObject(SF.c("Clr "), SF.c("RGBC"), SF.rgb(e.color || "#FFFFFF"));
+                d.putUnitDouble(SF.c("Opct"), SF.c("#Prc"), SF.num(e.opacity, 75));
+                d.putEnumerated(SF.c("GlwT"), SF.c("BETE"), SF.c("SfBL"));
+                d.putUnitDouble(SF.c("Ckmt"), SF.c("#Prc"), SF.num(e.spread, 0));
+                d.putUnitDouble(SF.c("blur"), SF.c("#Pxl"), SF.num(e.size, 5));
+                d.putUnitDouble(SF.c("Nose"), SF.c("#Prc"), 0);
+                d.putUnitDouble(SF.c("ShdN"), SF.c("#Prc"), 0);
+                d.putBoolean(SF.c("AntA"), true);
+                d.putObject(SF.c("TrnS"), SF.c("ShpC"), SF.linearContour());
+                d.putUnitDouble(SF.c("Inpr"), SF.c("#Prc"), 50);
+                if (t === "outerGlow") {
+                    fx.putObject(SF.c("OrGl"), SF.c("OrGl"), d);
+                } else {
+                    d.putEnumerated(SF.c("glwS"), SF.c("IGSr"), SF.c("SrcE"));
+                    fx.putObject(SF.c("IrGl"), SF.c("IrGl"), d);
+                }
+                break;
+
+            case "bevel":
+                d.putEnumerated(SF.c("hglM"), SF.c("BlnM"), SF.blend(e.highlightBlend || "screen"));
+                d.putObject(SF.c("hglC"), SF.c("RGBC"), SF.rgb(e.highlightColor || "#FFFFFF"));
+                d.putUnitDouble(SF.c("hglO"), SF.c("#Prc"), SF.num(e.highlightOpacity, 75));
+                d.putEnumerated(SF.c("sdwM"), SF.c("BlnM"), SF.blend(e.shadowBlend || "multiply"));
+                d.putObject(SF.c("sdwC"), SF.c("RGBC"), SF.rgb(e.shadowColor || "#000000"));
+                d.putUnitDouble(SF.c("sdwO"), SF.c("#Prc"), SF.num(e.shadowOpacity, 75));
+                d.putEnumerated(SF.c("bvlT"), SF.c("bvlT"), SF.c("SfBL"));
+                d.putEnumerated(SF.c("bvlS"), SF.c("BESl"), SF.c("InrB"));
+                d.putBoolean(SF.c("uglg"), false);
+                d.putUnitDouble(SF.c("lagl"), SF.c("#Ang"), SF.num(e.angle, 90));
+                d.putUnitDouble(SF.c("Lald"), SF.c("#Ang"), SF.num(e.altitude, 30));
+                d.putUnitDouble(SF.c("srgR"), SF.c("#Prc"), SF.num(e.depth, 100));
+                d.putUnitDouble(SF.c("blur"), SF.c("#Pxl"), SF.num(e.size, 3));
+                d.putEnumerated(SF.c("bvlD"), SF.c("BESs"), SF.c(e.direction === "down" ? "Out " : "In  "));
+                d.putObject(SF.c("TrnS"), SF.c("ShpC"), SF.linearContour());
+                d.putBoolean(SF.s("antialiasGloss"), false);
+                d.putUnitDouble(SF.c("Sftn"), SF.c("#Pxl"), SF.num(e.soften, 0));
+                fx.putObject(SF.c("ebbl"), SF.c("ebbl"), d);
+                break;
+
+            default:
+                throw new Error("Unknown effect type: " + t);
+        }
+    }
+    return fx;
+};
+
+// Applies effects to the active layer.
+SF.setEffectsOnActive = function (effects) {
+    if (!effects || effects.length === 0) return;
+    var d = new ActionDescriptor();
+    var r = new ActionReference();
+    r.putProperty(SF.c("Prpr"), SF.c("Lefx"));
+    r.putEnumerated(SF.c("Lyr "), SF.c("Ordn"), SF.c("Trgt"));
+    d.putReference(SF.c("null"), r);
+    d.putObject(SF.c("T   "), SF.c("Lefx"), SF.buildEffects(effects));
+    executeAction(SF.c("setd"), d, SF.NO);
+};
+
+// ---------------------------------------------------------------- layer selection helpers
+SF.activeLayerId = function () {
+    var r = new ActionReference();
+    r.putProperty(SF.c("Prpr"), SF.c("LyrI"));
+    r.putEnumerated(SF.c("Lyr "), SF.c("Ordn"), SF.c("Trgt"));
+    return executeActionGet(r).getInteger(SF.c("LyrI"));
+};
+
+SF.selectLayerById = function (id, add) {
+    var d = new ActionDescriptor();
+    var r = new ActionReference();
+    r.putIdentifier(SF.c("Lyr "), id);
+    d.putReference(SF.c("null"), r);
+    if (add) d.putEnumerated(SF.s("selectionModifier"), SF.s("selectionModifierType"), SF.s("addToSelection"));
+    d.putBoolean(SF.c("MkVs"), false);
+    executeAction(SF.c("slct"), d, SF.NO);
+};
+
+SF.selectLayers = function (ids) {
+    for (var i = 0; i < ids.length; i++) SF.selectLayerById(ids[i], i > 0);
+};
+
+SF.copyEffects = function () { executeAction(SF.s("copyEffects"), undefined, SF.NO); };
+
+SF.pasteEffects = function () {
+    var d = new ActionDescriptor();
+    d.putBoolean(SF.s("allowPasteFXOnLayerSet"), true);
+    executeAction(SF.s("pasteEffects"), d, SF.NO);
+};
+
+SF.groupSelected = function (name) {
+    var d = new ActionDescriptor();
+    var r = new ActionReference();
+    r.putClass(SF.s("layerSection"));
+    d.putReference(SF.c("null"), r);
+    var f = new ActionReference();
+    f.putEnumerated(SF.c("Lyr "), SF.c("Ordn"), SF.c("Trgt"));
+    d.putReference(SF.c("From"), f);
+    var n = new ActionDescriptor();
+    n.putString(SF.c("Nm  "), name);
+    d.putObject(SF.c("Usng"), SF.s("layerSection"), n);
+    executeAction(SF.c("Mk  "), d, SF.NO);
+    return app.activeDocument.activeLayer;
+};
+
+// ---------------------------------------------------------------- selection / splitting
+SF.selectRect = function (l, t, r, b) {
+    var d = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putProperty(SF.c("Chnl"), SF.c("fsel"));
+    d.putReference(SF.c("null"), ref);
+    var rc = new ActionDescriptor();
+    rc.putUnitDouble(SF.c("Top "), SF.c("#Pxl"), t);
+    rc.putUnitDouble(SF.c("Left"), SF.c("#Pxl"), l);
+    rc.putUnitDouble(SF.c("Btom"), SF.c("#Pxl"), b);
+    rc.putUnitDouble(SF.c("Rght"), SF.c("#Pxl"), r);
+    d.putObject(SF.c("T   "), SF.c("Rctn"), rc);
+    executeAction(SF.c("setd"), d, SF.NO);
+};
+
+SF.deselect = function () {
+    var d = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putProperty(SF.c("Chnl"), SF.c("fsel"));
+    d.putReference(SF.c("null"), ref);
+    d.putEnumerated(SF.c("T   "), SF.c("Ordn"), SF.c("None"));
+    executeAction(SF.c("setd"), d, SF.NO);
+};
+
+// Layer via Copy of the current selection. Returns new layer id, or -1 when the selection is empty.
+SF.layerViaCopy = function () {
+    try {
+        executeAction(SF.c("CpTL"), undefined, SF.NO);
+        return SF.activeLayerId();
+    } catch (e) {
+        return -1;
+    }
+};
+
+// Split by exact glyph rectangles. rects: [{name, l, t, r, b}] in top-left pixel coords (already padded).
+// Returns array of new layer ids (bottom to top order of creation).
+SF.splitByRects = function (doc, sourceLayer, rects) {
+    var srcId = sourceLayer.id;
+    var ids = [];
+    for (var i = 0; i < rects.length; i++) {
+        var g = rects[i];
+        if (g.r - g.l < 1 || g.b - g.t < 1) continue;
+        SF.selectLayerById(srcId, false);
+        SF.selectRect(g.l, g.t, g.r, g.b);
+        var id = SF.layerViaCopy();
+        if (id < 0) continue;
+        doc.activeLayer.name = g.name;
+        ids.push(id);
+    }
+    SF.deselect();
+    return ids;
+};
+
+// Split by connected shapes: pieces closer than `gap` pixels stay together (e.g. the dot of an "i").
+SF.splitByGap = function (doc, sourceLayer, gap) {
+    var srcId = sourceLayer.id;
+    doc.activeLayer = sourceLayer;
+    // Selection from layer transparency
+    var d = new ActionDescriptor();
+    var ref = new ActionReference();
+    ref.putProperty(SF.c("Chnl"), SF.c("fsel"));
+    d.putReference(SF.c("null"), ref);
+    var src = new ActionReference();
+    src.putEnumerated(SF.c("Chnl"), SF.c("Chnl"), SF.c("Trsp"));
+    d.putReference(SF.c("T   "), src);
+    executeAction(SF.c("setd"), d, SF.NO);
+
+    var grow = Math.max(1, Math.ceil(gap / 2));
+    doc.selection.expand(grow);
+    doc.selection.makeWorkPath(1.0);
+    var wp = null;
+    for (var p = 0; p < doc.pathItems.length; p++) if (doc.pathItems[p].kind === PathKind.WORKPATH) wp = doc.pathItems[p];
+    if (!wp) throw new Error("Could not build work path from layer alpha.");
+
+    // Collect subpaths and their bounds.
+    var subs = [];
+    for (var s = 0; s < wp.subPathItems.length; s++) {
+        var sp = wp.subPathItems[s];
+        var pts = sp.pathPoints;
+        var minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+        var infos = [];
+        for (var q = 0; q < pts.length; q++) {
+            var a = pts[q].anchor;
+            minX = Math.min(minX, a[0]); maxX = Math.max(maxX, a[0]);
+            minY = Math.min(minY, a[1]); maxY = Math.max(maxY, a[1]);
+            var ppi = new PathPointInfo();
+            ppi.kind = pts[q].kind;
+            ppi.anchor = a;
+            ppi.leftDirection = pts[q].leftDirection;
+            ppi.rightDirection = pts[q].rightDirection;
+            infos.push(ppi);
+        }
+        subs.push({ infos: infos, closed: sp.closed, l: minX, t: minY, r: maxX, b: maxY });
+    }
+    // Drop hole subpaths (bounds fully inside another subpath).
+    var outer = [];
+    for (var i = 0; i < subs.length; i++) {
+        var inside = false;
+        for (var j = 0; j < subs.length && !inside; j++) {
+            if (i === j) continue;
+            var A = subs[i], B = subs[j];
+            if (A.l >= B.l && A.t >= B.t && A.r <= B.r && A.b <= B.b && (A.r - A.l) * (A.b - A.t) < (B.r - B.l) * (B.b - B.t)) inside = true;
+        }
+        if (!inside) outer.push(subs[i]);
+    }
+    // Reading order: top-to-bottom rows, then left-to-right.
+    outer.sort(function (a, b) { return Math.abs(a.t - b.t) > 8 ? a.t - b.t : a.l - b.l; });
+
+    wp.remove();
+    var ids = [];
+    for (var o = 0; o < outer.length; o++) {
+        var spi = new SubPathInfo();
+        spi.operation = ShapeOperation.SHAPEXOR;
+        spi.closed = true;
+        spi.entireSubPath = outer[o].infos;
+        var tmp = doc.pathItems.add("sf_tmp", [spi]);
+        SF.selectLayerById(srcId, false);
+        tmp.makeSelection(0, true, SelectionType.REPLACE);
+        tmp.remove();
+        var id = SF.layerViaCopy();
+        if (id < 0) continue;
+        doc.activeLayer.name = "glyph-" + (o + 1);
+        ids.push(id);
+    }
+    SF.deselect();
+    return ids;
+};
+
+// ---------------------------------------------------------------- export
+SF.savePNG = function (doc, path) {
+    var opts = new PNGSaveOptions();
+    opts.compression = 6;
+    opts.interlaced = false;
+    doc.saveAs(new File(path), opts, true, Extension.LOWERCASE);
+};
+
+SF.savePSD = function (doc, path) {
+    var opts = new PhotoshopSaveOptions();
+    opts.layers = true;
+    opts.embedColorProfile = true;
+    opts.alphaChannels = true;
+    doc.saveAs(new File(path), opts, true, Extension.LOWERCASE);
+};
+
+// "cap" styles store sizes as % of capital-letter height. Convert to atlas pixels (k = px per unit, from the job).
+SF.resolveUnits = function (style, k) {
+    if (String(style.units || "px").toLowerCase() !== "cap") return style;
+    if (!k || k <= 0) throw new Error("Style uses cap units but the job has no unitScale.");
+    var px = function (v) { return (v === undefined || v === null || v < 0) ? v : Math.round(v * k * 10) / 10; };
+    var layers = style.layers || [];
+    for (var i = 0; i < layers.length; i++) {
+        var L = layers[i];
+        if (L.offset) L.offset = [Math.round(L.offset[0] * k), Math.round(L.offset[1] * k)];
+        var fx = L.effects || [];
+        for (var j = 0; j < fx.length; j++) {
+            fx[j].size = px(fx[j].size);
+            fx[j].distance = px(fx[j].distance);
+            fx[j].soften = px(fx[j].soften);
+        }
+    }
+    style.units = "px";
+    return style;
+};
+
+SF.hasGradient = function (style) {
+    var layers = style.layers || [];
+    for (var i = 0; i < layers.length; i++) {
+        var fx = layers[i].effects || [];
+        for (var j = 0; j < fx.length; j++) if (fx[j].type === "gradientOverlay" && fx[j].enabled !== false) return true;
+    }
+    return false;
+};

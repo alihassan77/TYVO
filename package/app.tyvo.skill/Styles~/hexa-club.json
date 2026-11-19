@@ -1,0 +1,111 @@
+{
+  "id": "hexa-club",
+  "name": "Hexa Club",
+  "track": "photoshop",
+  "description": "Game title (Hexa cluB): yellow-to-orange gradient body, thick plum outline, white outer rim around outline + extrude, plum 3D extrude underneath. Colours sampled by eye from a reference image.",
+  "padding": 13,
+  "layers": [
+    {
+      "name": "Rim Extrude",
+      "offset": [
+        0,
+        4
+      ],
+      "effects": [
+        {
+          "type": "colorOverlay",
+          "color": "#FFFFFF"
+        },
+        {
+          "type": "stroke",
+          "position": "outside",
+          "size": 7,
+          "color": "#FFFFFF"
+        }
+      ]
+    },
+    {
+      "name": "Rim",
+      "effects": [
+        {
+          "type": "colorOverlay",
+          "color": "#FFFFFF"
+        },
+        {
+          "type": "stroke",
+          "position": "outside",
+          "size": 7,
+          "color": "#FFFFFF"
+        }
+      ]
+    },
+    {
+      "name": "Extrude",
+      "offset": [
+        0,
+        4
+      ],
+      "effects": [
+        {
+          "type": "colorOverlay",
+          "color": "#561548"
+        },
+        {
+          "type": "stroke",
+          "position": "outside",
+          "size": 4,
+          "color": "#561548"
+        }
+      ]
+    },
+    {
+      "name": "Outline",
+      "effects": [
+        {
+          "type": "colorOverlay",
+          "color": "#6E1D5C"
+        },
+        {
+          "type": "stroke",
+          "position": "outside",
+          "size": 4,
+          "color": "#6E1D5C"
+        }
+      ]
+    },
+    {
+      "name": "Body",
+      "effects": [
+        {
+          "type": "gradientOverlay",
+          "angle": 90,
+          "stops": [
+            {
+              "color": "#FF7A00",
+              "location": 0
+            },
+            {
+              "color": "#FFB41A",
+              "location": 50
+            },
+            {
+              "color": "#FFE53B",
+              "location": 100
+            }
+          ]
+        },
+        {
+          "type": "innerShadow",
+          "color": "#FFFFFF",
+          "opacity": 45,
+          "blend": "screen",
+          "angle": 90,
+          "distance": 2,
+          "spread": 0,
+          "size": 1
+        }
+      ]
+    }
+  ],
+  "letterSpacing": 10
+}

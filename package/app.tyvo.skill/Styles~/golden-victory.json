@@ -1,0 +1,34 @@
+{
+  "id": "golden-victory",
+  "name": "Golden Victory",
+  "track": "photoshop",
+  "description": "Reward/celebration headline (GREAT JOB!): yellow-to-orange gradient body with a soft top highlight, dark purple outline and a chunky 3D extrude underneath. Made for purple popups.",
+  "padding": 12,
+  "layers": [
+    {
+      "name": "Extrude",
+      "offset": [0, 5],
+      "effects": [
+        { "type": "colorOverlay", "color": "#2C155E" },
+        { "type": "stroke", "position": "outside", "size": 5, "color": "#2C155E" }
+      ]
+    },
+    {
+      "name": "Outline",
+      "effects": [
+        { "type": "colorOverlay", "color": "#3B1E7A" },
+        { "type": "stroke", "position": "outside", "size": 5, "color": "#3B1E7A" }
+      ]
+    },
+    {
+      "name": "Body",
+      "effects": [
+        { "type": "gradientOverlay", "angle": 90, "stops": [
+          { "color": "#FF9A00", "location": 0 },
+          { "color": "#FFC61A", "location": 45 },
+          { "color": "#FFEF5C", "location": 100 } ] },
+        { "type": "innerShadow", "color": "#FFFFFF", "opacity": 55, "blend": "screen", "angle": 90, "distance": 2, "spread": 0, "size": 1 }
+      ]
+    }
+  ]
+}

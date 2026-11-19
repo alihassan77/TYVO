@@ -1,0 +1,17 @@
+{
+  "id": "shared-dark-stroke",
+  "name": "Shared Dark Stroke",
+  "track": "shared",
+  "description": "One atlas for every flat button: white body (tinted by the TMP text color) plus a black stroke at partial alpha, so the stroke reads as a darker shade of whatever button is behind it (dark grey on grey, dark green on green).",
+  "padding": 8,
+  "shared": { "strokeAlpha": 45, "testBackgrounds": ["#8E8E93", "#3DBE4E", "#2F80ED", "#F2C94C", "#EB5757", "#9B51E0"] },
+  "layers": [
+    {
+      "name": "Body",
+      "effects": [
+        { "type": "colorOverlay", "color": "#FFFFFF", "opacity": 100 },
+        { "type": "stroke", "position": "outside", "size": 4, "color": "#000000", "opacity": 45 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "app.tyvo.skill",
+  "version": "0.1.0",
+  "displayName": "TYVO - Custom font maker by Ali",
+  "description": "Builds stylized (Photoshop layer-style) TextMeshPro bitmap fonts: generate font asset + raw atlas, stylize in Photoshop, apply with the Bitmap Custom Atlas shader, then check padding/bleed and render a test sheet. Includes a file bridge so Claude Code can drive it.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.ugui": "2.0.0"
+  },
+  "author": { "name": "Mindstorm Studios" }
+}

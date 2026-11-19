@@ -1,0 +1,31 @@
+{
+  "id": "candy-pop",
+  "name": "Candy Pop",
+  "track": "shared",
+  "description": "Chunky button label (NEXT): white body with a thick outline + 3D extrude that take the button colour (black at 50% alpha). One font for every button: dark green on green, dark purple on purple, dark grey on grey. Body colour = TMP text colour.",
+  "padding": 10,
+  "shared": { "strokeAlpha": 50, "testBackgrounds": ["#2ECC71", "#A56BF5", "#8E8E93", "#2F80ED", "#F2C94C", "#EB5757"] },
+  "layers": [
+    {
+      "name": "Extrude",
+      "group": "Outline", "groupOpacity": 50,
+      "offset": [0, 4],
+      "effects": [
+        { "type": "colorOverlay", "color": "#000000" },
+        { "type": "stroke", "position": "outside", "size": 4, "color": "#000000" }
+      ]
+    },
+    {
+      "name": "Outline",
+      "group": "Outline",
+      "effects": [
+        { "type": "colorOverlay", "color": "#000000" },
+        { "type": "stroke", "position": "outside", "size": 4, "color": "#000000" }
+      ]
+    },
+    {
+      "name": "Body",
+      "effects": [ { "type": "colorOverlay", "color": "#FFFFFF" } ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "gold-bevel-3d",
+  "name": "Gold Bevel 3D",
+  "track": "photoshop",
+  "description": "Example of an extra-layer style: a dark extrude layer offset down, then a per-glyph gold gradient body with stroke and bevel. Gradient forces per-glyph split.",
+  "padding": 12,
+  "layers": [
+    {
+      "name": "Extrude",
+      "offset": [0, 4],
+      "effects": [
+        { "type": "colorOverlay", "color": "#7A3B00" },
+        { "type": "stroke", "position": "outside", "size": 3, "color": "#4A2300" }
+      ]
+    },
+    {
+      "name": "Body",
+      "effects": [
+        { "type": "gradientOverlay", "angle": 90, "stops": [ { "color": "#FFB300", "location": 0 }, { "color": "#FFF3A0", "location": 100 } ] },
+        { "type": "stroke", "position": "outside", "size": 3, "color": "#8A4B00" },
+        { "type": "bevel", "size": 2, "depth": 100, "highlightOpacity": 60, "shadowOpacity": 30 }
+      ]
+    }
+  ]
+}

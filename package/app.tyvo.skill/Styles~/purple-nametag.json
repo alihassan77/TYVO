@@ -1,0 +1,16 @@
+{
+  "id": "purple-nametag",
+  "name": "Purple NameTag",
+  "track": "photoshop",
+  "description": "Purple body with a hard darker drop shadow underneath. Rebuilt from the Figma flow (Collection-Purple / Purple-NameTag). Colors were sampled from a screenshot: replace with the exact values from the Photoshop style.",
+  "padding": 10,
+  "layers": [
+    {
+      "name": "Body",
+      "effects": [
+        { "type": "colorOverlay", "color": "#5B3FD0", "opacity": 100 },
+        { "type": "dropShadow", "color": "#2B1A78", "opacity": 100, "blend": "normal", "angle": 90, "distance": 3, "spread": 0, "size": 0 }
+      ]
+    }
+  ]
+}
