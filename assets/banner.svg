@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-label="TYVO - Custom font maker by Ali">
+  <title>TYVO - Custom font maker by Ali</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#121418"/>
+      <stop offset="1" stop-color="#1B1D23"/>
+    </linearGradient>
+    <radialGradient id="light" cx="0.5" cy="0.42" r="0.6">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="polish" gradientUnits="userSpaceOnUse" x1="0" y1="108" x2="0" y2="258">
+      <stop offset="0" stop-color="#F7EEDF"/>
+      <stop offset="0.55" stop-color="#E2CBA0"/>
+      <stop offset="1" stop-color="#B8925A"/>
+    </linearGradient>
+    <clipPath id="metrics"><rect x="0" y="108" width="1280" height="150"/></clipPath>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#FFFFFF" stroke-opacity="0.025" stroke-width="1"/>
+    </pattern>
+    <filter id="fxOutline" x="-25%" y="-25%" width="150%" height="160%" color-interpolation-filters="sRGB"><feMorphology in="SourceAlpha" operator="dilate" radius="7" result="d7"/><feMorphology in="SourceAlpha" operator="dilate" radius="3" result="d3"/><feComposite in="d7" in2="d3" operator="out" result="ring"/><feFlood flood-color="#B89B6C" flood-opacity="0.95"/><feComposite in2="ring" operator="in" result="ringC"/><feMerge><feMergeNode in="ringC"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="fxDepth" x="-25%" y="-25%" width="150%" height="160%" color-interpolation-filters="sRGB"><feMorphology in="SourceAlpha" operator="dilate" radius="7" result="d7"/><feMorphology in="SourceAlpha" operator="dilate" radius="3" result="d3"/><feComposite in="d7" in2="d3" operator="out" result="ring"/><feFlood flood-color="#B89B6C" flood-opacity="0.95"/><feComposite in2="ring" operator="in" result="ringC"/><feOffset in="d7" dy="8" result="d7o"/><feComposite in="d7o" in2="d7" operator="out" result="dep"/><feFlood flood-color="#4A3F2E"/><feComposite in2="dep" operator="in" result="depC"/><feMerge><feMergeNode in="depC"/><feMergeNode in="ringC"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur stdDeviation="9"/></filter>
+    <mask id="oBelow8" maskUnits="userSpaceOnUse" x="0" y="0" width="1280" height="420">
+      <rect width="1280" height="420" fill="#fff"/><ellipse cx="938.0" cy="183.0" rx="64.5" ry="68.5" fill="none" stroke="#000" stroke-width="27"/>
+    </mask>
+    <mask id="oBelow16" maskUnits="userSpaceOnUse" x="0" y="0" width="1280" height="420">
+      <rect width="1280" height="420" fill="#fff"/><ellipse cx="938.0" cy="183.0" rx="64.5" ry="68.5" fill="none" stroke="#000" stroke-width="27"/>
+    </mask>
+  </defs>
+
+  <rect width="1280" height="420" rx="20" fill="url(#bg)"/>
+  <rect width="1280" height="420" rx="20" fill="url(#grid)"/>
+  <rect width="1280" height="420" rx="20" fill="url(#light)"/>
+
+  <!-- type metrics -->
+  <g stroke="#FFFFFF" stroke-width="1">
+    <line x1="40" y1="108" x2="1240" y2="108" stroke-opacity="0.10"/>
+    <line x1="40" y1="183.0" x2="1240" y2="183.0" stroke-opacity="0.05" stroke-dasharray="3 7"/>
+    <line x1="40" y1="258" x2="1240" y2="258" stroke-opacity="0.10"/>
+  </g>
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" letter-spacing="2.5" fill="#FFFFFF" fill-opacity="0.28">
+    <text x="56" y="100">CAP HEIGHT</text>
+    <text x="56" y="250">BASELINE</text>
+    <text x="1224" y="100" text-anchor="end">150</text>
+    <text x="1224" y="250" text-anchor="end">0</text>
+  </g>
+
+  <!-- construction (brass hairlines) -->
+  <g fill="none" stroke="#B89B6C" stroke-opacity="0.35" stroke-width="1">
+    <circle cx="938.0" cy="183.0" r="97.0" stroke-dasharray="2 6"/>
+    <line x1="234.0" y1="272" x2="234.0" y2="282"/>
+    <line x1="426.0" y1="272" x2="426.0" y2="282"/>
+    <line x1="426.0" y1="272" x2="426.0" y2="282"/>
+    <line x1="628.0" y1="272" x2="628.0" y2="282"/>
+    <line x1="628.0" y1="272" x2="628.0" y2="282"/>
+    <line x1="830.0" y1="272" x2="830.0" y2="282"/>
+    <line x1="830.0" y1="272" x2="830.0" y2="282"/>
+    <line x1="1046.0" y1="272" x2="1046.0" y2="282"/>
+  </g>
+
+  <!-- wordmark: plain -> custom -->
+  <g clip-path="url(#metrics)" fill="none" stroke="#ECE8E1" stroke-width="13" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M271.0 114.5 H389.0 M330.0 114.5 V258"/></g>
+  <g filter="url(#fxOutline)"><g clip-path="url(#metrics)" fill="none" stroke="#ECE8E1" stroke-width="13" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M454.0 96 L527.0 186.0 L600.0 96 M527.0 186.0 V258"/></g></g>
+  <g filter="url(#fxDepth)"><g clip-path="url(#metrics)" fill="none" stroke="#ECE8E1" stroke-width="13" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M660.0 96 L729.0 242 L798.0 96"/></g></g>
+  <g>
+    <g mask="url(#oBelow16)" filter="url(#soft)"><ellipse cx="938.0" cy="183.0" rx="64.5" ry="68.5" fill="none" stroke="#000" stroke-opacity="0.55" stroke-width="27" transform="translate(0,16)"/></g>
+    <g mask="url(#oBelow8)"><ellipse cx="938.0" cy="183.0" rx="64.5" ry="68.5" fill="none" stroke="#4A3F2E" stroke-width="27" transform="translate(0,8)"/></g>
+    <ellipse cx="938.0" cy="183.0" rx="76.0" ry="80.0" fill="none" stroke="#B89B6C" stroke-opacity="0.95" stroke-width="4"/>
+    <ellipse cx="938.0" cy="183.0" rx="53.0" ry="57.0" fill="none" stroke="#B89B6C" stroke-opacity="0.95" stroke-width="4"/>
+    <ellipse cx="938.0" cy="183.0" rx="64.5" ry="68.5" fill="none" stroke="url(#polish)" stroke-width="13"/>
+  </g>
+
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" letter-spacing="3" fill="#FFFFFF" fill-opacity="0.32">
+    <text x="330.0" y="302" text-anchor="middle">PLAIN</text>
+    <text x="527.0" y="302" text-anchor="middle">OUTLINE</text>
+    <text x="729.0" y="302" text-anchor="middle">DEPTH</text>
+    <text x="938.0" y="302" text-anchor="middle">POLISHED</text>
+  </g>
+
+  <!-- style image -> textmeshpro -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" letter-spacing="3.5" fill="#B3B7BF">
+    <text x="460.4" y="344" textLength="117" lengthAdjust="spacing">STYLE IMAGE</text>
+    <line x1="595.0" y1="340" x2="679.0" y2="340" stroke="#B89B6C" stroke-opacity="0.8"/>
+    <path d="M678.0 336 L685.0 340 L678.0 344" fill="none" stroke="#B89B6C" stroke-opacity="0.8"/>
+    <text x="703.0" y="344" textLength="117" lengthAdjust="spacing">TEXTMESHPRO</text>
+  </g>
+
+  <!-- branding (muted) -->
+  <text x="640.0" y="382" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" letter-spacing="6" fill="#8B9099" fill-opacity="0.75">CUSTOM FONT MAKER BY ALI</text>
+</svg>

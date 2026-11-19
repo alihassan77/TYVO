@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="TYVO - Custom font maker by Ali" width="100%">
+</p>
+
 # TYVO
 
 *Custom font maker by Ali*
