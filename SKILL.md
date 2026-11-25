@@ -11,7 +11,8 @@ Turns the manual 16-step flow (Font Asset Creator → Extract Atlas → Photosho
 <skill>/
   SKILL.md                     this file
   GUIDE.md                     short team guide (point people here)
-  scripts/tyvo.py              CLI: install, ping, setup, styles, analyze, generate, photoshop, apply, check, render, compare, accept, run, asl
+  scripts/bootstrap.ps1 / .sh  setup check: Python (installs only if missing) + `tyvo.py ensure`
+  scripts/tyvo.py              CLI: ensure, install, ping, setup, styles, analyze, generate, photoshop, apply, check, render, compare, accept, run, asl
   scripts/install_skill.py     installs this skill into ~/.claude/skills (copy, or --link)
   package/app.tyvo.skill/    Unity package (copied into the project by `install`)
     Editor/                    generator, apply, checks, test renderer, image analyzer, compare, Photoshop runner, bridge, Tools window
@@ -21,7 +22,23 @@ Turns the manual 16-step flow (Font Asset Creator → Extract Atlas → Photosho
   reference/troubleshooting.md failures and what to do
 ```
 
-`TYVO="python <skill>/scripts/tyvo.py --project <UnityProjectRoot>"` in the examples below. If Unity is not open on the project, any command opens it (matching editor from Unity Hub) and waits.
+`TYVO="<python> <skill>/scripts/tyvo.py --project <UnityProjectRoot>"` in the examples below. If Unity is not open on the project, any command opens it (matching editor from Unity Hub) and waits.
+
+## Before anything else: setup check (automatic, every new project or session)
+
+Run the bootstrap once before the first TYVO command. It skips every step that is already done, so it is safe to run on a machine/project that is already set up:
+```
+# Windows
+powershell -NoProfile -ExecutionPolicy Bypass -File <skill>/scripts/bootstrap.ps1 -Project "<UnityProjectRoot>"
+# macOS
+sh <skill>/scripts/bootstrap.sh "<UnityProjectRoot>"
+```
+1. **Python 3.8+**: uses the one already installed; only if none is found, installs Python 3.12 (Windows: `winget`, per user, no admin; macOS: Homebrew). The Microsoft Store `python` alias is ignored.
+2. **Unity package** (`tyvo.py ensure`): installs `Packages/app.tyvo.skill` only if it is missing or differs from the skill's copy, opens Unity if needed, imports TMP Essential Resources only if missing. Prints `"package": "already up to date"` when nothing was changed.
+
+The last line is `PYTHON=<path>`: use that path as `<python>` in `$TYVO` (right after a fresh install, plain `python` may not be on PATH yet in this shell). Tell the user in one line what was installed, or that everything was already set up. If the bootstrap fails (no winget/Homebrew, no Unity editor for the project's version), give the user the error and the manual fix from it; don't work around it.
+
+Every Unity command (`run`, `generate`, `apply`, ...) also checks the package first and reinstalls it only when out of date, so a skill update reaches the project automatically.
 
 ## 0. From a reference image + font file (the main use)
 
@@ -54,17 +71,17 @@ Rules:
 - Track B works only on flat or near-flat backgrounds. On light buttons (yellow/white) the stroke may be too faint: check the test render; if needed make a copy of the style with higher `opacity` on the stroke (e.g. 60) rather than per-button fonts.
 - Track B text colour is set on the TMP component (`color`), never in the material.
 
-## 2. One-time setup per project
+## 2. Project setup details
 
+The bootstrap above does all of this. The single steps, for when something fails:
 ```
-$TYVO install      # copies the package into Packages/, adds com.unity.ugui to the manifest
-```
-Then make sure Unity is open on that project and has compiled (`tyvo.py` brings the Unity window to the front if a command is not picked up within 10 s).
-```
+$TYVO ensure       # install-if-needed + open Unity + TMP Essential Resources if missing (skips what is done)
+$TYVO install      # force a reinstall: copies the package into Packages/, adds com.unity.ugui to the manifest
 $TYVO ping         # tmpShaders / tmpSettings must be true
 $TYVO setup        # if false: imports TMP Essential Resources, then ping again after ~20 s
 $TYVO styles       # lists presets with their computed requiredPadding
 ```
+`tyvo.py` brings the Unity window to the front if a command is not picked up within 10 s.
 Photoshop must be installed (2024+). It can be open with the user's own documents: the scripts open/close only their own files.
 
 ## 3. Build

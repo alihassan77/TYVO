@@ -17,10 +17,15 @@ A Claude Code skill + Unity package that turns a reference image of styled text 
 
 ```
 python scripts/install_skill.py                                   # once per computer (adds the skill to Claude Code)
-python scripts/tyvo.py --project "<Unity project>" install        # once per Unity project
 ```
 
-Requires Unity 6 (uGUI 2.0 / TextMeshPro), Photoshop 2024+, Python 3. Windows and macOS.
+Project setup is automatic: the skill runs `scripts/bootstrap.ps1` (Windows) / `scripts/bootstrap.sh` (macOS) before its first command. It installs Python 3 only if missing, and the Unity package only if missing or out of date; anything already installed is skipped. To run it by hand:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap.ps1 -Project "<Unity project>"
+```
+
+Requires Unity 6 (uGUI 2.0 / TextMeshPro) and Photoshop 2024+. Windows and macOS.
 
 ## Layout
 
@@ -29,4 +34,5 @@ Requires Unity 6 (uGUI 2.0 / TextMeshPro), Photoshop 2024+, Python 3. Windows an
 | `SKILL.md`, `GUIDE.md`, `reference/` | Instructions and docs |
 | `scripts/tyvo.py` | CLI: analyze, generate, run, apply, check, render, compare, asl… |
 | `scripts/install_skill.py` | Installs the skill into `~/.claude/skills/tyvo` |
+| `scripts/bootstrap.ps1`, `scripts/bootstrap.sh` | Setup check: Python (only if missing) + Unity package (only if missing/out of date) |
 | `package/app.tyvo.skill/` | Unity package: generator, checks, analyzer, compare, Photoshop scripts, style presets |
