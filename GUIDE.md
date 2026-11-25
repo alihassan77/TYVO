@@ -7,23 +7,28 @@ Make styled TextMeshPro fonts (outline, 3D extrude, gradient, shadow) from any .
 ## What you need
 - Unity 6 project (TextMeshPro / uGUI 2.0)
 - Photoshop 2024 or newer
-- Python 3
 - Claude Code (optional – everything also works from the Unity menu)
 
+Python 3 and the Unity package are set up for you (see below).
+
 ## Install (once per computer)
-1. Copy the `TYVO` folder anywhere (e.g. from Box).
-2. Run:
+1. Copy the `TYVO` folder anywhere (e.g. from Box) or clone https://github.com/alihassan77/TYVO.
+2. Add the skill to Claude Code (needs Python; if you don't have it, run step 1 of the next section first):
    ```
    python TYVO/scripts/install_skill.py
    ```
 3. Restart Claude Code.
 
-## Install (once per Unity project)
-Open the project in Unity, then run:
+## Setup (automatic)
+With Claude you don't need to do anything: the first time you ask for a font in a project, Claude runs the setup check. It skips whatever is already in place and only installs what is missing:
+1. **Python 3**: installed with winget (Windows) or Homebrew (macOS) only if not found.
+2. **Unity package**: copied into the project's `Packages/` only if missing or out of date, plus TMP Essential Resources if missing.
+
+To run it yourself:
 ```
-python TYVO/scripts/tyvo.py --project "<path to Unity project>" install
+powershell -NoProfile -ExecutionPolicy Bypass -File TYVO/scripts/bootstrap.ps1 -Project "<path to Unity project>"
 ```
-Click on the Unity window once so it compiles. That's it.
+(macOS: `sh TYVO/scripts/bootstrap.sh "<path to Unity project>"`)
 
 ## Make a font
 

@@ -6,7 +6,8 @@ Talks to the open Unity editor through files in <project>/Temp/TYVO/bridge/.
 The Unity package app.tyvo.skill must be installed (see `install`).
 
 Examples
-  python tyvo.py --project "F:/Unity Projects/Testing" install
+  python tyvo.py --project "F:/Unity Projects/Testing" ensure     (one-time setup; skips what is already done)
+  python tyvo.py --project "F:/Unity Projects/Testing" install    (force a reinstall of the package)
   python tyvo.py --project ... ping
   python tyvo.py --project ... setup
   python tyvo.py --project ... styles
@@ -171,10 +172,54 @@ def call(project, payload, timeout=900):
     raise SystemExit("Timed out after %ds waiting for Unity (command '%s'). Is the editor open on %s and not stuck in a dialog?" % (timeout, payload.get("command"), project))
 
 
+OLD_PACKAGE_NAMES = ("com.mindstorm.stylized-tmp-font", "com.mindstorm.tyvo")
+
+
+def package_status(project):
+    """Why the project's copy of the Unity package needs (re)installing, or "" when it is current.
+    Compares every file of the skill's package byte for byte; extra files Unity adds (.meta) are ignored."""
+    for old_name in OLD_PACKAGE_NAMES:
+        if os.path.isdir(os.path.join(project, "Packages", old_name)):
+            return "old package name %s present" % old_name
+    dst = os.path.join(project, "Packages", PACKAGE_NAME)
+    if not os.path.isdir(dst):
+        return "not installed"
+    for root, _, files in os.walk(PACKAGE_SRC):
+        for name in files:
+            src = os.path.join(root, name)
+            rel = os.path.relpath(src, PACKAGE_SRC)
+            other = os.path.join(dst, rel)
+            if not os.path.isfile(other):
+                return "missing " + rel.replace(os.sep, "/")
+            if os.path.getsize(src) != os.path.getsize(other):
+                return "out of date (%s)" % rel.replace(os.sep, "/")
+            with open(src, "rb") as f1, open(other, "rb") as f2:
+                if f1.read() != f2.read():
+                    return "out of date (%s)" % rel.replace(os.sep, "/")
+    try:
+        with open(os.path.join(project, "Packages", "manifest.json"), encoding="utf-8") as f:
+            if "com.unity.ugui" not in json.load(f).get("dependencies", {}):
+                return "com.unity.ugui missing from manifest"
+    except (OSError, ValueError):
+        return "cannot read Packages/manifest.json"
+    return ""
+
+
+def ensure_installed(project):
+    """Install the package only when it is missing or out of date. Returns the install result, or None if skipped."""
+    reason = package_status(project)
+    if not reason:
+        return None
+    print("TYVO: Unity package %s, installing..." % reason, file=sys.stderr)
+    result = install(project)
+    result["reason"] = reason
+    return result
+
+
 def install(project):
     if not os.path.isdir(os.path.join(project, "Assets")):
         raise SystemExit("Not a Unity project: " + project)
-    for old_name in ("com.mindstorm.stylized-tmp-font", "com.mindstorm.tyvo"):
+    for old_name in OLD_PACKAGE_NAMES:
         old = os.path.join(project, "Packages", old_name)
         if os.path.isdir(old):
             shutil.rmtree(old)  # earlier package names: would define the same classes twice
@@ -215,6 +260,32 @@ def install(project):
     return result
 
 
+def ensure(project, timeout=900):
+    """One-time project setup, skipping every step that is already done:
+    package (install only if missing/out of date), Unity open + bridge alive, TMP Essential Resources."""
+    if not os.path.isdir(os.path.join(project, "Assets")):
+        raise SystemExit("Not a Unity project: " + project)
+    installed = ensure_installed(project)
+    result = {"package": "installed (%s)" % installed["reason"] if installed else "already up to date",
+              "tmpEssentials": "already imported", "ready": False}
+    if installed and installed.get("warning"):
+        result["warning"] = installed["warning"]
+    ping = call(project, {"command": "ping"}, timeout).get("result") or {}
+    if not (ping.get("tmpShaders") and ping.get("tmpSettings")):
+        call(project, {"command": "setup"}, timeout)
+        result["tmpEssentials"] = "imported"
+        for _ in range(6):  # the import finishes after a domain reload
+            time.sleep(10)
+            ping = call(project, {"command": "ping"}, timeout).get("result") or {}
+            if ping.get("tmpShaders") and ping.get("tmpSettings"):
+                break
+    result["ready"] = bool(ping.get("tmpShaders") and ping.get("tmpSettings"))
+    result["unity"] = ping.get("unity")
+    if not result["ready"]:
+        result["warning"] = "TMP Essential Resources still missing: in Unity use Window > TextMeshPro > Import TMP Essential Resources."
+    return result
+
+
 def run_photoshop(js, timeout=600):
     """Run a JavaScript string in Photoshop (Windows COM / macOS osascript). Returns stdout."""
     if platform.system() == "Windows":
@@ -247,7 +318,7 @@ def main():
     ap.add_argument("--project", help="Unity project root (folder with Assets/)")
     ap.add_argument("--timeout", type=int, default=900)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("ping", "setup", "refresh", "styles", "install"):
+    for name in ("ping", "setup", "refresh", "styles", "install", "ensure"):
         sub.add_parser(name)
 
     def gen_args(p):
@@ -289,6 +360,11 @@ def main():
     if a.cmd == "install":
         print(json.dumps(install(project), indent=2))
         return
+    if a.cmd == "ensure":
+        print(json.dumps(ensure(project, a.timeout), indent=2))
+        return
+    # Every Unity command makes sure the package is in place first (skipped when already current).
+    ensure_installed(project)
 
     def gen_payload():
         return {"font": a.font, "style": a.style, "name": a.name or "", "outputFolder": a.output_folder or "", "padding": a.padding,
